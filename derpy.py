@@ -1,3 +1,6 @@
+from collections import defaultdict
+
+
 class Token(object):
     def __init__(self, token):
         self.token = token
@@ -47,13 +50,13 @@ class Token(object):
     def __repr__(self):
         return 'Token(%r)' % self.token
 
-    def graph(self, graphed):
+    def graph(self, graphed, rank):
         gid = graph_id(self)
         if gid in graphed:
             return
         print
         print '  %s [label="%s" shape=box]' % (gid, str(self.token))
-        graphed[gid] = True
+        graphed[gid] = rank
 
 
 EPS = Token(True)       # epsilon or 'empty' token
@@ -202,27 +205,33 @@ class Grammar(object):
         tokens = map(Token, raw_tokens)
         return self.match_(tokens)
 
-    def graph(self, graphed=None):
-        firstcall = graphed is None
+    def graph(self, graphed=None, rank=0):
+        firstcall = rank == 0
         gid = graph_id(self)
         if firstcall:
             graphed = {}
             print 'digraph derpy {'
-            print 'graph [layout=dot rankdir=TB]'
+            print 'graph [layout=dot rankdir=TB ordering=out]'
         elif gid in graphed:
             return
         l, r = self.lgrammar, self.rgrammar
         lid, rid = graph_id(l), graph_id(r)
+        points_up = lambda xid: graphed.get(xid, 999999) < rank
         print
         print '  %s[label="%s"%s]' % (gid, self.operation or 'S', ' shape=invhouse' if firstcall else '')
-        print '    %s -> %s[label="L"%s]' % (gid, lid, ' constraint=false' if lid in graphed else '')
+        print '    %s -> %s[label="L"%s]' % (gid, lid, ' constraint=false' if points_up(lid) else '')
         if self.operation is not None:
-            print '    %s -> %s[label="R"%s]' % (gid, rid, ' constraint=false' if rid in graphed else '')
-        graphed[gid] = True
-        l.graph(graphed)
+            print '    %s -> %s[label="R"%s]' % (gid, rid, ' constraint=false' if points_up(rid) else '')
+        graphed[gid] = rank
+        l.graph(graphed, rank+1)
         if self.operation is not None:
-            r.graph(graphed)
+            r.graph(graphed, rank+1)
         if firstcall:
+            ranks = defaultdict(list)
+            for xid, rank in graphed.items():
+                ranks[rank].append(xid)
+            for rank in sorted(ranks.keys()[1:]):
+                print '  {rank=same; %s}' % ' '.join(ranks[rank])
             print '}'
         return graphed
 
