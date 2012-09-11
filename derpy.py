@@ -1,16 +1,17 @@
 from collections import defaultdict
 
 
+EPS_TOKEN_VALUE = True
+NUL_TOKEN_VALUE = None
+
+
 class Token(object):
     def __init__(self, token):
         self.token = token
+        self.nullable = (token == EPS_TOKEN_VALUE)
 
     def get_value(self):
         return self
-
-    @property
-    def nullable(self):
-        return self == EPS
 
     def derive(self, token):
         if self == token:
@@ -60,8 +61,8 @@ class Token(object):
         graphed[gid] = rank
 
 
-EPS = Token(True)       # epsilon or 'empty' token
-NUL = Token(None)       # Null or 'no match' token
+EPS = Token(EPS_TOKEN_VALUE)    # epsilon or 'empty' token
+NUL = Token(NUL_TOKEN_VALUE)    # Null or 'no match' token
 LAZY_TOKEN = Token(Ellipsis)
 CAT = 'CAT'
 ALT = 'ALT'
@@ -88,8 +89,6 @@ class Grammar(object):
         if x == EPS:
             return y
         if y == EPS:
-            return x
-        if x is y:
             return x
         result = Grammar(x, CAT, y)
         result._lfold_cats()
@@ -125,17 +124,17 @@ class Grammar(object):
             return y
         if y == NUL:
             return x
-        if x is y:
+        if x == y:
             return x
         return Grammar(x, ALT, y)
 
     @property
     def nullable(self):
         if self._nullable is None:
-            self._nullable = ''
+            self._nullable = ''     # A non-None 'False'y value to indicate calculation is in progress
             _nullable = self._is_nullable()
             if _nullable == '':
-                raise Exception('Doesn\'t work')
+                raise Exception('Could not decide if this not is nullable')
             self._nullable = _nullable
         return self._nullable
 
