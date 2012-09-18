@@ -133,18 +133,11 @@ class Grammar(object):
         if self._nullable is None:
             self._nullable = ''     # A non-None 'False'y value to indicate calculation is in progress
             _nullable = self._is_nullable()
-            if _nullable == '':
-                raise Exception('Could not decide if this not is nullable')
+            if not isinstance(_nullable, bool):
+                self._nullable = None
+                return False
             self._nullable = _nullable
         return self._nullable
-
-    def peek_nullable(self):
-        if self._nullable is not None:
-            return self._nullable
-        _nullable = self._is_nullable()
-        if isinstance(_nullable, bool):
-            self._nullable = _nullable
-        return _nullable
 
     def _is_nullable(self):
         l = self.lgrammar
@@ -152,14 +145,14 @@ class Grammar(object):
         if self.operation is None:
             return l.nullable
         elif self.operation is CAT:
-            ln = l.nullable if isinstance(l, Token) else l.peek_nullable()
-            rn = r.nullable if isinstance(r, Token) else r.peek_nullable()
+            ln = l.nullable
+            rn = r.nullable
             if ln is False or rn is False:
                 return False
             return ln and rn
         elif self.operation is ALT:
-            ln = l.nullable if isinstance(l, Token) else l.peek_nullable()
-            rn = r.nullable if isinstance(r, Token) else r.peek_nullable()
+            ln = l.nullable
+            rn = r.nullable
             if ln is True or rn is True:
                 return True
             if not isinstance(ln, bool):
